@@ -1,18 +1,27 @@
-# 1. 硬编码密码
-# 注意：使用单引号 '' 防止特殊字符被 PowerShell 解析
-# 密码以字母开头，包含大小写、数字和 ! 符号，长度16位，绝对符合所有Windows策略
-$password = 'MyRDP2026!Secure' 
+# 1. 硬编码密码（纯大小写+数字，彻底避开特殊字符解析问题）
+# 满足 Windows 复杂度策略，且不会触发任何字符编码异常
+$password = "RdpUser2026Pass" 
+$username = "vum"
 
-# 2. 将明文密码转换为安全字符串
-$securePass = ConvertTo-SecureString $password -AsPlainText -Force
+# 2. 使用底层 net user 命令创建用户
+# 这比 New-LocalUser 更稳定，完全不需要 ConvertTo-SecureString 转换
+net user $username $password /add /y
+if ($LASTEXITCODE -ne 0) { 
+    throw "Failed to create user via net user" 
+}
 
-# 3. 创建用户并分配权限
-New-LocalUser -Name "vum" -Password $securePass -AccountNeverExpires
-Add-LocalGroupMember -Group "Administrators" -Member "vum"
-Add-LocalGroupMember -Group "Remote Desktop Users" -Member "vum"
+# 3. 添加到管理员组
+net localgroup Administrators $username /add
 
-# 4. 将账号密码写入环境变量，供后续步骤打印
-echo "RDP_CREDS=User: vum | Password: $password" >> $env:GITHUB_ENV
+# 4. 添加到远程桌面组
+net localgroup "Remote Desktop Users" $username /add
 
-# 5. 验证用户是否创建成功
-if (-not (Get-LocalUser -Name "vum")) { throw "User creation failed" }
+# 5. 将账号密码写入环境变量，供后续步骤打印
+echo "RDP_CREDS=User: $username | Password: $password" >> $env:GITHUB_ENV
+
+# 6. 验证用户是否创建成功
+if (-not (Get-LocalUser -Name $username -ErrorAction SilentlyContinue)) { 
+    throw "User creation failed verification" 
+}
+
+Write-Host "User '$username' created successfully."
