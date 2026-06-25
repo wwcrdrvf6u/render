@@ -11,7 +11,7 @@ $rawPassword += $charSet.Upper | Get-Random -Count 4
 $rawPassword += $charSet.Lower | Get-Random -Count 4
 $rawPassword += $charSet.Number | Get-Random -Count 4
 $rawPassword += $charSet.Special | Get-Random -Count 4
-$password = "1" 
+$password = "1AcBd@234" 
 $securePass = ConvertTo-SecureString $password -AsPlainText -Force
 New-LocalUser -Name "vum" -Password $securePass -AccountNeverExpires
 Add-LocalGroupMember -Group "Administrators" -Member "vum"
